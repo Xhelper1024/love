@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爱心汇聚动画</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a3a, #0a0a1a);
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .main-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4.5rem;
+            font-weight: bold;
+            text-align: center;
+            z-index: 100;
+            background: linear-gradient(45deg, #ff6b9d, #ff8fab, #ffb3c6, #ff8fab, #ff6b9d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px rgba(255, 107, 157, 0.5);
+            animation: textGlow 3s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        
+        @keyframes textGlow {
+            0% {
+                text-shadow: 0 0 30px rgba(255, 107, 157, 0.5);
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                text-shadow: 0 0 50px rgba(255, 107, 157, 0.8);
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+        }
+        
+        .animation-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .heart {
+            position: absolute;
+            color: #ff6b9d;
+            filter: drop-shadow(0 0 10px rgba(255, 107, 157, 0.9));
+            transition: transform 0.5s ease-out;
+            z-index: 2;
+        }
+        
+        .main-heart {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            transition: all 1.5s ease;
+            color: #ff6b9d;
+            filter: drop-shadow(0 0 40px rgba(255, 107, 157, 1));
+            z-index: 3;
+        }
+        
+        .main-heart.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        
+        .pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 107, 157, 0.3);
+            box-shadow: 0 0 0 0 rgba(255, 107, 157, 0.7);
+            animation: pulse 2s infinite;
+            z-index: 0;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 107, 157, 0.7);
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 0 0 30px rgba(255, 107, 157, 0);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 107, 157, 0);
+            }
+        }
+        
+        .background-hearts {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .background-heart {
+            position: absolute;
+            color: rgba(255, 107, 157, 0.15);
+            font-size: 30px;
+            animation: float 20s infinite linear;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.1;
+            }
+            10% {
+                opacity: 0.2;
+            }
+            50% {
+                transform: translateY(-100px) rotate(180deg);
+                opacity: 0.3;
+            }
+            90% {
+                opacity: 0.1;
+            }
+            100% {
+                transform: translateY(0) rotate(360deg);
+                opacity: 0.1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-text {
+                font-size: 3rem;
+            }
+            
+            .main-heart.show {
+                font-size: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-text">《老谢❤树懒》</div>
+    
+    <div class="animation-container" id="animationContainer"></div>
+    <div class="main-heart" id="mainHeart"><i class="fas fa-heart"></i></div>
+    <div class="pulse"></div>
+    
+    <!-- 背景爱心 -->
+    <div class="background-hearts" id="backgroundHearts"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const animationContainer = document.getElementById('animationContainer');
+            const mainHeart = document.getElementById('mainHeart');
+            const backgroundHearts = document.getElementById('backgroundHearts');
+            
+            // 动画参数
+            let hearts = [];
+            let animationId = null;
+            let isAnimating = true;
+            let phase = 0; // 0:汇聚, 1:散开, 2:停留
+            let phaseProgress = 0;
+            
+            // 创建背景爱心
+            function createBackgroundHearts() {
+                const heartCount = 15;
+                
+                for (let i = 0; i < heartCount; i++) {
+                    const heart = document.createElement('div');
+                    heart.className = 'background-heart';
+                    heart.innerHTML = '<i class="fas fa-heart"></i>';
+                    
+                    // 随机位置
+                    const left = Math.random() * 100;
+                    const top = Math.random() * 100;
+                    
+                    // 随机大小
+                    const size = 15 + Math.random() * 30;
+                    
+                    // 随机动画延迟和持续时间
+                    const delay = Math.random() * 20;
+                    const duration = 15 + Math.random() * 20;
+                    
+                    heart.style.left = `${left}%`;
+                    heart.style.top = `${top}%`;
+                    heart.style.fontSize = `${size}px`;
+                    heart.style.animationDelay = `${delay}s`;
+                    heart.style.animationDuration = `${duration}s`;
+                    
+                    backgroundHearts.appendChild(heart);
+                }
+            }
+            
+            // 初始化爱心
+            function initHearts() {
+                // 清除现有爱心
+                hearts.forEach(heart => {
+                    if (heart.element && heart.element.parentNode) {
+                        heart.element.parentNode.removeChild(heart.element);
+                    }
+                });
+                
+                hearts = [];
+                
+                // 创建新的爱心
+                const heartCount = 80;
+                
+                for (let i = 0; i < heartCount; i++) {
+                    createHeart(i);
+                }
+                
+                // 隐藏大爱心
+                mainHeart.classList.remove('show');
+                mainHeart.style.fontSize = '0px';
+                
+                // 重置相位
+                phase = 0;
+                phaseProgress = 0;
+            }
+            
+            // 创建单个爱心
+            function createHeart(index) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heart.innerHTML = '<i class="fas fa-heart"></i>';
+                
+                // 随机设置初始位置（屏幕四周）
+                const side = Math.floor(Math.random() * 4); // 0:上, 1:右, 2:下, 3:左
+                let left, top;
+                
+                switch(side) {
+                    case 0: // 上边
+                        left = Math.random() * 100;
+                        top = -10;
+                        break;
+                    case 1: // 右边
+                        left = 110;
+                        top = Math.random() * 100;
+                        break;
+                    case 2: // 下边
+                        left = Math.random() * 100;
+                        top = 110;
+                        break;
+                    case 3: // 左边
+                        left = -10;
+                        top = Math.random() * 100;
+                        break;
+                }
+                
+                // 随机颜色（粉色系）
+                const hue = 330 + Math.random() * 30; // 330-360度是粉色到红色范围
+                const saturation = 70 + Math.random() * 20; // 70-90%
+                const lightness = 50 + Math.random() * 20; // 50-70%
+                const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                
+                // 随机大小
+                const size = 12 + Math.random() * 18;
+                
+                // 应用样式
+                heart.style.fontSize = `${size}px`;
+                heart.style.left = `${left}%`;
+                heart.style.top = `${top}%`;
+                heart.style.color = color;
+                
+                // 添加到容器
+                animationContainer.appendChild(heart);
+                
+                // 计算目标位置（大爱心的形状）
+                // 使用心形参数方程计算位置
+                const angle = (index / 80) * Math.PI * 2;
+                const scale = 35; // 心形大小
+                
+                // 心形参数方程
+                const t = angle;
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                
+                // 转换为百分比坐标（相对于屏幕中心）
+                const targetX = 50 + (x / 16) * scale;
+                const targetY = 50 - (y / 13) * scale;
+                
+                // 保存爱心数据
+                hearts.push({
+                    element: heart,
+                    startX: left,
+                    startY: top,
+                    targetX: targetX,
+                    targetY: targetY,
+                    currentX: left,
+                    currentY: top,
+                    progress: 0,
+                    speed: 0.003 + Math.random() * 0.003, // 随机速度
+                    color: color,
+                    size: size,
+                    finalSize: size
+                });
+            }
+            
+            // 开始动画循环
+            function startAnimationLoop() {
+                if (!isAnimating) return;
+                
+                // 动画循环
+                function animate() {
+                    // 根据相位处理动画
+                    switch(phase) {
+                        case 0: // 汇聚阶段
+                            phaseProgress += 0.008;
+                            if (phaseProgress >= 1) {
+                                phaseProgress = 1;
+                                phase = 2; // 进入停留阶段
+                            }
+                            updateHearts(phaseProgress, true);
+                            break;
+                            
+                        case 2: // 停留阶段
+                            phaseProgress += 0.003;
+                            if (phaseProgress >= 1) {
+                                phaseProgress = 0;
+                                phase = 1; // 进入散开阶段
+                            }
+                            // 在停留阶段，让大爱心轻微跳动
+                            const pulseScale = 1 + Math.sin(Date.now() / 300) * 0.05;
+                            mainHeart.style.transform = `translate(-50%, -50%) scale(${pulseScale})`;
+                            break;
+                            
+                        case 1: // 散开阶段
+                            phaseProgress += 0.008;
+                            if (phaseProgress >= 1) {
+                                phaseProgress = 0;
+                                phase = 0; // 回到汇聚阶段
+                                resetHeartsPosition(); // 重置爱心位置
+                            }
+                            updateHearts(phaseProgress, false);
+                            break;
+                    }
+                    
+                    animationId = requestAnimationFrame(animate);
+                }
+                
+                animate();
+            }
+            
+            // 更新爱心位置
+            function updateHearts(progress, isConverging) {
+                let allHeartsDone = true;
+                
+                hearts.forEach(heart => {
+                    let targetProgress = progress;
+                    
+                    // 如果是汇聚阶段
+                    if (isConverging) {
+                        // 计算当前位置
+                        const easeProgress = easeOutCubic(targetProgress);
+                        const currentX = heart.startX + (heart.targetX - heart.startX) * easeProgress;
+                        const currentY = heart.startY + (heart.targetY - heart.startY) * easeProgress;
+                        
+                        // 更新爱心位置
+                        heart.element.style.left = `${currentX}%`;
+                        heart.element.style.top = `${currentY}%`;
+                        heart.currentX = currentX;
+                        heart.currentY = currentY;
+                        
+                        // 在接近终点时逐渐变大
+                        if (targetProgress > 0.7) {
+                            const scale = 1 + (targetProgress - 0.7) * 0.7;
+                            heart.element.style.transform = `scale(${scale})`;
+                        }
+                        
+                        // 当所有爱心接近终点时显示大爱心
+                        if (targetProgress > 0.9 && !mainHeart.classList.contains('show')) {
+                            mainHeart.classList.add('show');
+                            mainHeart.style.fontSize = '200px';
+                        }
+                    } 
+                    // 如果是散开阶段
+                    else {
+                        // 计算当前位置（从当前位置回到起始位置）
+                        const easeProgress = easeInCubic(targetProgress);
+                        const currentX = heart.currentX + (heart.startX - heart.currentX) * easeProgress;
+                        const currentY = heart.currentY + (heart.startY - heart.currentY) * easeProgress;
+                        
+                        // 更新爱心位置
+                        heart.element.style.left = `${currentX}%`;
+                        heart.element.style.top = `${currentY}%`;
+                        
+                        // 在散开开始时隐藏大爱心
+                        if (targetProgress > 0.1 && mainHeart.classList.contains('show')) {
+                            mainHeart.classList.remove('show');
+                            mainHeart.style.fontSize = '0px';
+                        }
+                        
+                        // 在散开阶段逐渐缩小
+                        if (targetProgress < 0.3) {
+                            const scale = 1 + (0.3 - targetProgress) * 0.7;
+                            heart.element.style.transform = `scale(${scale})`;
+                        } else {
+                            heart.element.style.transform = 'scale(1)';
+                        }
+                    }
+                    
+                    if (targetProgress < 1) {
+                        allHeartsDone = false;
+                    }
+                });
+                
+                return allHeartsDone;
+            }
+            
+            // 重置爱心位置（为下一轮动画做准备）
+            function resetHeartsPosition() {
+                hearts.forEach(heart => {
+                    // 随机设置新的起始位置（屏幕四周）
+                    const side = Math.floor(Math.random() * 4); // 0:上, 1:右, 2:下, 3:左
+                    
+                    switch(side) {
+                        case 0: // 上边
+                            heart.startX = Math.random() * 100;
+                            heart.startY = -10;
+                            break;
+                        case 1: // 右边
+                            heart.startX = 110;
+                            heart.startY = Math.random() * 100;
+                            break;
+                        case 2: // 下边
+                            heart.startX = Math.random() * 100;
+                            heart.startY = 110;
+                            break;
+                        case 3: // 左边
+                            heart.startX = -10;
+                            heart.startY = Math.random() * 100;
+                            break;
+                    }
+                    
+                    // 更新当前位置
+                    heart.currentX = heart.targetX;
+                    heart.currentY = heart.targetY;
+                    
+                    // 重置进度
+                    heart.progress = 0;
+                });
+            }
+            
+            // 缓动函数
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+            
+            function easeInCubic(t) {
+                return t * t * t;
+            }
+            
+            // 初始化并开始动画
+            createBackgroundHearts();
+            initHearts();
+            startAnimationLoop();
+            
+            // 窗口大小改变时重新初始化
+            window.addEventListener('resize', function() {
+                initHearts();
+            });
+        });
+    </script>
+</body>
+</html>
